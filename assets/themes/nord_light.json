@@ -1,0 +1,13 @@
+{
+  "brightness": "light",
+  "primaryColor": "#5E81AC",
+  "scaffoldBackgroundColor": "#ECEFF4",
+  "cardColor": "#E5E9F0",
+  "appBarBackgroundColor": "#81A1C1",
+  "appBarForegroundColor": "#2E3440",
+  "textColor": "#2E3440",
+  "titleColor": "#3B4252",
+  "iconColor": "#4C566A",
+  "primary": "#5E81AC",
+  "secondary": "#88C0D0"
+}
