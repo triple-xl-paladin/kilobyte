@@ -1,7 +1,8 @@
+
 /*
  * Copyright (c) 2025  Alexander Chen <aprchen@gmail.com>
  *
- * This file payee_model.dart is part of kilobyte
+ * This file app_constants.dart is part of kilobyte
  *
  * kilobyte is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,19 +18,24 @@
  * along with kilobyte.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-class Payee {
-  final int? payeeId;
-  final String payeeName;
+enum Meal {
+  breakfast,
+  lunch,
+  dinner,
+  other,
+}
 
-  Payee({this.payeeId, required this.payeeName});
+extension MealExtension on Meal {
+  String get label {
+    switch (this) {
+      case Meal.breakfast: return 'Breakfast';
+      case Meal.lunch:     return 'Lunch';
+      case Meal.dinner:    return 'Dinner';
+      case Meal.other:     return 'Other';
+    }
+  }
+}
 
-  factory Payee.fromMap(Map<String, dynamic> map) => Payee(
-    payeeId: map['payeeId'],
-    payeeName: map['payeeName'],
-  );
-
-  Map<String, dynamic> toMap() => {
-    'payeeId': payeeId,
-    'payeeName': payeeName,
-  };
+class AppConstants {
+  static final String appName = 'Kilobyte';
 }

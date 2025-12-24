@@ -1,20 +1,20 @@
 /*
  * Copyright (c) 2025  Alexander Chen <aprchen@gmail.com>
  *
- * This file sidebar_menu.dart is part of flutter_scaffold
+ * This file sidebar_menu.dart is part of kilobyte
  *
- * flutter_scaffold is free software: you can redistribute it and/or modify
+ * kilobyte is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * flutter_scaffold is distributed in the hope that it will be useful,
+ * kilobyte is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with flutter_scaffold.  If not, see <https://www.gnu.org/licenses/>.
+ * along with kilobyte.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 import 'package:flutter/material.dart';
@@ -22,13 +22,11 @@ import '../screens/settings_screen.dart';
 import 'package:kilobyte/utils/other_utils.dart';
 
 class SidebarMenu extends StatefulWidget {
-  final void Function(Widget) onSelectContent;
   final bool isDarkMode;
   final void Function(bool) onThemeChanged;
   final List<Map<String, dynamic>> features;
 
   const SidebarMenu({
-    required this.onSelectContent,
     required this.isDarkMode,
     required this.onThemeChanged,
     required this.features,
@@ -74,30 +72,37 @@ class _SidebarMenuState extends State<SidebarMenu> {
                     // Leave this as Placeholder as it will reset the screen to home
                     // If it points to homescreen, it will keep recreating the screen
                     // within the homescreen, duplicating everything.
-                    onTap: () => widget.onSelectContent(Placeholder()),
+                    onTap: () => Navigator.pop(context),
                   ),
-                  ListTile(
-                    leading: Icon(Icons.style),
-                    title: Text('Item 1'),
-                    onTap: () => widget.onSelectContent(Placeholder()),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.style),
-                    title: Text('Item 2'),
-                    onTap: () => widget.onSelectContent(Placeholder()),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.style),
-                    title: Text('Item 3'),
-                    onTap: () => widget.onSelectContent(Placeholder()),
-                  ),
+                  ...widget.features.map((feature)
+                  {
+                    return ListTile(
+                        leading: Icon(feature['icon']),
+                        title: Text(feature['title']),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => feature['content']()),
+                          );
+                        }
+                    );
+                  }),
                   ListTile(
                     leading: Icon(Icons.settings),
                     title: Text('Settings'),
-                    onTap: () => widget.onSelectContent(SettingsScreen(
-                      isDarkMode: widget.isDarkMode,
-                      onThemeChanged: widget.onThemeChanged,
-                    )),
+                    onTap:() {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) =>
+                          SettingsScreen(
+                            isDarkMode: widget.isDarkMode,
+                            onThemeChanged: widget.onThemeChanged,
+                          ),
+                        ),
+                      );
+                    }
                   ),
                 ], // Children in expanded
               ),
