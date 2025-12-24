@@ -19,10 +19,21 @@
  */
 
 enum Meal {
-  breakfast,
-  lunch,
-  dinner,
-  other,
+  breakfast('Breakfast'),
+  lunch('Lunch'),
+  dinner('Dinner'),
+  other('Other');
+
+  final String label;
+
+  const Meal(this.label);
+
+  static final List<String> mealLabels = [
+    Meal.breakfast.label,
+    Meal.lunch.label,
+    Meal.dinner.label,
+    Meal.other.label
+  ];
 }
 
 extension MealExtension on Meal {

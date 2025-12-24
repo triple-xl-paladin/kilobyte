@@ -18,8 +18,10 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:kilobyte/constants/app_constants.dart';
 import 'package:kilobyte/widgets/safe_scaffold_widget.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import '../constants/app_constants.dart';
 
 class MealEntryForm extends StatefulWidget{
   const MealEntryForm({super.key});
@@ -35,7 +37,21 @@ class _MealEntryFormState extends State<MealEntryForm> {
   Widget build (BuildContext context) {
     return SafeScaffold(
       appBar: AppBar(title: Text('Meal Entry')),
-      body: Container()
+      body: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height,
+          maxWidth: MediaQuery.of(context).size.width,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child: Column(
+            children: [
+              _header(context),
+              _mealView(context),
+            ],
+          ),
+        )
+      )
     );
   }
 
@@ -51,9 +67,36 @@ class _MealEntryFormState extends State<MealEntryForm> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           // TODO: Dropdown
+          DropdownMenu(
+            initialSelection: Meal.mealLabels[0],
+              dropdownMenuEntries: <DropdownMenuEntry>[
+                DropdownMenuEntry(
+                  value: 1, label: Meal.mealLabels[0],
+                ),
+                DropdownMenuEntry(
+                  value: 1, label: Meal.mealLabels[1],
+                ),
+                DropdownMenuEntry(
+                  value: 1, label: Meal.mealLabels[2],
+                ),
+                DropdownMenuEntry(
+                  value: 1, label: Meal.mealLabels[3],
+                ),
+              ],
+          ),
           // TODO: Search field
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Search',
+                prefixIcon: Icon(Icons.search),
+                labelText: 'Search'
+              )
+            ),
+          ),
           // TODO: Scanner button
-          Icon(MdiIcons.barcodeScan),
+          Icon(MdiIcons.barcodeScan, size: 52,),
         ],
       ),
     );

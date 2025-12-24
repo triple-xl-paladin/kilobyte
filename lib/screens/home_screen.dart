@@ -27,6 +27,7 @@ import '../widgets/sidebar_menu.dart';
 import '../widgets/feature_grid_tile.dart';
 import '../screens/debug_database_screen.dart';
 import '../widgets/vertical_progress_bar_chart.dart';
+import 'meal_entry_form.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -57,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       {
         'title': 'Breakfast',
         'icon': FontAwesomeIcons.egg,
-        'content': () => Placeholder(),
+        'content': () => MealEntryForm(),
       },
       {
         'title': 'Lunch',
@@ -116,14 +117,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.all(8.0),
       width: double.infinity,
-      height: 250,
-      // Reminder: [VerticalProgressBarChart] is a custom widget
-      child: VerticalProgressBarChart(),
+      height: 300,
+      child: Card(
+        elevation: 2,
+        margin: EdgeInsets.all(6),
+        // Reminder: [VerticalProgressBarChart] is a custom widget
+        child: VerticalProgressBarChart(),
+      )
     );
   }
 
   Widget _mealButtons(BuildContext context) {
     return Expanded(
+      child: Card(
         child: GridView.count(
           crossAxisCount: 4,
           crossAxisSpacing: 10,
@@ -141,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }).toList(),
         )
+      )
     );
   }
 }
