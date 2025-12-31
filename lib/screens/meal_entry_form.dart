@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:kilobyte/constants/app_constants.dart';
 import 'package:kilobyte/widgets/safe_scaffold_widget.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
-import '../constants/app_constants.dart';
 
 class MealEntryForm extends StatefulWidget{
   const MealEntryForm({super.key});
@@ -31,7 +30,32 @@ class MealEntryForm extends StatefulWidget{
 
 }
 
-class _MealEntryFormState extends State<MealEntryForm> {
+class _MealEntryFormState extends State<MealEntryForm> with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  final navRails = [
+    NavigationRailDestination(
+      icon: Icon(Icons.schedule),
+      label: Text('Recent'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.star),
+      label: Text('Favourites'),
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: navRails.length, vsync: this);
+    _tabController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build (BuildContext context) {
@@ -47,7 +71,7 @@ class _MealEntryFormState extends State<MealEntryForm> {
           child: Column(
             children: [
               _header(context),
-              _mealView(context),
+              Expanded(child: _mealView(context),)
             ],
           ),
         )
@@ -62,7 +86,8 @@ class _MealEntryFormState extends State<MealEntryForm> {
     return Container(
       padding: const EdgeInsets.all(8.0),
       width: double.infinity,
-      height: 250,
+      height: 70,
+      //color: Colors.red,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -96,7 +121,18 @@ class _MealEntryFormState extends State<MealEntryForm> {
             ),
           ),
           // TODO: Scanner button
-          Icon(MdiIcons.barcodeScan, size: 52,),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Implement camera function
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                // Make the button more square
+                borderRadius: BorderRadius.circular(5),
+              ),
+            ),
+            child: Icon(MdiIcons.barcodeScan, size: 52,)
+          ),
         ],
       ),
     );
@@ -104,6 +140,36 @@ class _MealEntryFormState extends State<MealEntryForm> {
 
   // View the current items in the meal and total calorie tally
   Widget _mealView(BuildContext context) {
-    return Container();
+
+    return SizedBox(
+      height: MediaQuery.of(context).size.height,
+      width: MediaQuery.of(context).size.width,
+      child: Row (
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          NavigationRail(
+            selectedIndex: _tabController.index.clamp(0, navRails.length-1),
+            onDestinationSelected: (index) {
+              _tabController.animateTo(index);
+            },
+            labelType: NavigationRailLabelType.none,
+            destinations: navRails,
+          ),
+          const VerticalDivider(width: 1),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              physics: NeverScrollableScrollPhysics(), // disables swipe
+              children: [
+                Center(child: Text('Recent')),
+                Center(child: Text('Favourites')),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
+
 }

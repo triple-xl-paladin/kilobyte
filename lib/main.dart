@@ -116,7 +116,7 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'My App',
+      title: 'Kilobyte',
       theme: themeProvider.themeData,
       home: HomeScreen(),
       //scrollBehavior: const AlwaysVisibleScrollBehavior(),
