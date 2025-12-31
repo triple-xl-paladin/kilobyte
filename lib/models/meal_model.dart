@@ -1,0 +1,77 @@
+/*
+ * Copyright (c) 2025  Alexander Chen <aprchen@gmail.com>
+ *
+ * This file meal_model.dart is part of kilobyte
+ *
+ * kilobyte is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * kilobyte is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with kilobyte.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+import 'package:kilobyte/constants/app_constants.dart';
+import 'package:kilobyte/models/item_model.dart';
+
+/// Represents a single meal entry stored in the database.
+///
+/// A [MealModel] links a [Meal] enum value with the date/time
+/// the meal occurred and an optional list of consumed items.
+///
+/// ## Persistence
+/// - Stored in SQLite
+/// - [meal] is persisted using [Meal.name]
+/// - [mealDate] is stored as an ISO-8601 string
+/// - [items] are stored in a separate table and loaded separately
+///
+class MealModel {
+  /// The type of meal (breakfast, lunch, dinner, etc).
+  Meal meal;
+  /// The date and time the meal took place.
+  DateTime mealDate;
+
+  /// Items associated with this meal.
+  ///
+  /// This field is not embedded in the meals table; it is
+  /// typically populated via a join or secondary query.
+  List<ItemModel>? items;
+
+  MealModel({
+    required this.meal,
+    required this.mealDate,
+    this.items,
+  });
+
+  /// Creates a [MealModel] from a SQLite row.
+  ///
+  /// Expects the following keys:
+  /// - `meal`: `String` matching [Meal.name]
+  /// - `mealDate`: ISO-8601 `String`
+  /// - `items`: optional list of item maps
+  factory MealModel.fromMap(Map<String, dynamic> map) {
+    return MealModel (
+      meal: Meal.fromName(map['meal']),
+      mealDate: map['mealDate'],
+      items: map['items'] != null ? (map['items'] as List).map((item) =>
+          ItemModel.fromMap(item)).toList() : null,
+    );
+  }
+
+  /// Converts this model into a map suitable for SQLite insertion.
+  ///
+  /// Note:
+  /// - [Meal] is serialized using [Meal.name]
+  /// - [DateTime] is serialized using [DateTime.toIso8601String]
+  Map<String, dynamic> toMap() => {
+    'meal': meal.name,
+    'mealDate': mealDate.toIso8601String(),
+    'items': items?.map((item) => item.toMap()).toList(),
+  };
+}

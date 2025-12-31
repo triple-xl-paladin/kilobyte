@@ -21,11 +21,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:kilobyte/constants/app_constants.dart';
 import 'package:kilobyte/models/item_model.dart';
-import '../models/budget_model.dart';
-import '../models/actuals_model.dart';
-import '../models/manual_phasing_model.dart';
-import '../models/payee_model.dart';
-import '../models/category_model.dart';
 import '../services/logging_service.dart';
 import '../utils/debug_utils.dart';
 import 'package:sqflite/sqflite.dart';
@@ -83,6 +78,8 @@ class DatabaseHelper {
         protein REAL,
         salt REAL,
         sugar REAL,
+        lastUsed DATETIME,
+        frequency INTEGER
       )
     ''');
 
@@ -132,6 +129,7 @@ class DatabaseHelper {
     }
   }
 
+  /*
   /// Get budgets from the database
   ///
   /// Returns a list of budgets
@@ -313,7 +311,7 @@ class DatabaseHelper {
     final db = await instance.database;
     await db.delete('payee', where: 'payeeId = ?', whereArgs: [payeeId]);
   }
-
+*/
   /// Delete the database
   Future<void> resetDatabase() async {
     final dbPath = await getDatabasesPath();

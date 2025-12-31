@@ -80,7 +80,7 @@ class _MealEntryFormState extends State<MealEntryForm> with SingleTickerProvider
   }
 
   // Contains the dropdown box of the current meal (e.g. lunch)
-  // A search item textfield/textform
+  // A search item textField/textForm
   // And a scanner button using Icons(Icon.barcodeScanner)
   Widget _header(BuildContext context){
     return Container(
@@ -120,7 +120,6 @@ class _MealEntryFormState extends State<MealEntryForm> with SingleTickerProvider
               )
             ),
           ),
-          // TODO: Scanner button
           ElevatedButton(
             onPressed: () {
               // TODO: Implement camera function

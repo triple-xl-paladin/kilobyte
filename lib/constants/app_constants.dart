@@ -18,15 +18,28 @@
  * along with kilobyte.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/// Represents the type of meal.
+///
+/// The enum [name] is used for persistence and must remain stable.
+/// The [label] is for display purposes only and may be localised.
+///
+/// IMPORTANT:
+/// Do not persist [Meal.label].
+/// Only [Meal.name] is stored in the database.
 enum Meal {
   breakfast('Breakfast'),
   lunch('Lunch'),
   dinner('Dinner'),
   other('Other');
 
+  /// User-facing display label.
   final String label;
 
   const Meal(this.label);
+
+  static Meal fromName(String name) => Meal.values.firstWhere((e) => e.name == name);
+
+  static Meal fromLabel(String label) => Meal.values.firstWhere((e) => e.label == label);
 
   static final List<String> mealLabels = [
     Meal.breakfast.label,
@@ -34,6 +47,7 @@ enum Meal {
     Meal.dinner.label,
     Meal.other.label
   ];
+
 }
 
 extension MealExtension on Meal {

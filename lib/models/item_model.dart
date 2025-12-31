@@ -17,7 +17,10 @@
  * along with kilobyte.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+/// Represents a single product entry stored in the database.
+///
 class ItemModel {
+  int? productId; // internal DB id
   String name;
   double? calories;
   int? ean;
@@ -28,6 +31,7 @@ class ItemModel {
   double? sugar;
 
   ItemModel({
+    this.productId,
     required this.name,
     this.ean,
     this.fat,
@@ -38,8 +42,11 @@ class ItemModel {
     this.calories,
   });
 
+  /// Creates a [ItemModel] from a SQLite row.
+  ///
   factory ItemModel.fromMap(Map<String, dynamic> map) =>
     ItemModel(
+      productId: map['productId'],
       name: map['name'],
       ean: map['ean'],
       fat: map['fat'],
@@ -50,7 +57,10 @@ class ItemModel {
       calories: map['calories'],
     );
 
+  /// Converts this model into a map suitable for SQLite insertion.
+  ///
   Map<String, dynamic> toMap() => {
+    'productId': productId,
     'name': name,
     'ean': ean,
     'fat': fat,
