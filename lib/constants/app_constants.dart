@@ -49,4 +49,5 @@ extension MealExtension on Meal {
 
 class AppConstants {
   static final String appName = 'Kilobyte';
+  static final String dbName = 'kilobyte.db';
 }

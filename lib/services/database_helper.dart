@@ -18,6 +18,9 @@
  */
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:kilobyte/constants/app_constants.dart';
+import 'package:kilobyte/models/item_model.dart';
 import '../models/budget_model.dart';
 import '../models/actuals_model.dart';
 import '../models/manual_phasing_model.dart';
@@ -28,7 +31,6 @@ import '../utils/debug_utils.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:io';
-//import 'package:flutter/foundation.dart';
 import '../utils/other_utils.dart';
 
 /// Example database implementation for a simple budget and expenditure
@@ -37,7 +39,7 @@ import '../utils/other_utils.dart';
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  static final String _dbName = 'my_money.db';
+  static final String _dbName = AppConstants.dbName;
 
   DatabaseHelper._init();
 
@@ -52,14 +54,12 @@ class DatabaseHelper {
     final path = join(dbPath, filePath);
 
     // Delete the existing database for clean start (development only!)
-    /*
     bool resetDatabase = !kReleaseMode;
     final dbFile = File(path);
     if (await dbFile.exists()) {
-      print('Deleting existing database at $path');
+      LoggingService().info('Deleting existing database at $path');
       await dbFile.delete();
     }
-     */
 
     LoggingService().info('${DateTime.now()}: Database to be loaded $path');
     return await openDatabase(path, version: 1, onCreate: _createDB);
@@ -71,58 +71,36 @@ class DatabaseHelper {
   Future _createDB(Database db, int version) async {
     LoggingService().info('${DateTime.now()}: Database tables to be created');
 
-    // Create budget table
+    /// Create item table
     await db.execute('''
-      CREATE TABLE budgets (
-        budgetId INTEGER PRIMARY KEY AUTOINCREMENT,
-        categoryId INTEGER,
-        description TEXT,
-        startDate TEXT,
-        endDate TEXT,
-        totalAmount REAL,
-        phasingType TEXT,
-        FOREIGN KEY(categoryId) REFERENCES categories(categoryId) ON DELETE CASCADE
+      CREATE TABLE products (
+        productId INTEGER PRIMARY KEY AUTOINCREMENT,
+        ean INTEGER,
+        name TEXT,
+        calories REAL,
+        fat REAL,
+        carbs REAL,
+        protein REAL,
+        salt REAL,
+        sugar REAL,
       )
     ''');
 
-    // Create categories table
+    /// Create meal entry table
     await db.execute('''
-      CREATE TABLE categories (
-        categoryId INTEGER PRIMARY KEY AUTOINCREMENT,
-        categoryName TEXT
+      CREATE TABLE meal (
+        mealId INTEGER PRIMARY KEY AUTOINCREMENT,
+        mealName TEXT,
+        mealDTTM DATETIME,
       )
     ''');
 
-    /// Create actual table
+    /// Create meal items table
     await db.execute('''
-      CREATE TABLE actual (
+      CREATE TABLE mealItems (
         actualId INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT,
-        payeeId INTEGER,
-        categoryId INTEGER,
-        description TEXT,
-        amount REAL,
-        FOREIGN KEY(payeeId) REFERENCES payees(payeeId) ON DELETE CASCADE,
-        FOREIGN KEY(categoryId) REFERENCES categories(categoryId) ON DELETE CASCADE
-      )
-    ''');
-
-    /// Create payees table
-    await db.execute('''
-      CREATE TABLE payee (
-        payeeId INTEGER PRIMARY KEY AUTOINCREMENT,
-        payeeName TEXT
-      )
-    ''');
-
-    /// Create manual phasing table
-    await db.execute('''
-      CREATE TABLE manual_phasing (
-        manualPhasingId INTEGER PRIMARY KEY AUTOINCREMENT,
-        budgetId INTEGER,
-        month INTEGER,
-        amount REAL,
-        FOREIGN KEY(budgetId) REFERENCES budgets(budgetId) ON DELETE CASCADE
+        FOREIGN KEY(mealId) REFERENCES meal(mealId) ON DELETE CASCADE,
+        FOREIGN KEY(productId) REFERENCES products(productId) ON DELETE CASCADE
       )
     ''');
 
@@ -131,35 +109,25 @@ class DatabaseHelper {
 
   // CRUD operations here...
 
-  /// Insert budgets into the database
-  /// If the budget is set to manual, it will also insert the manual phasing
-  ///
-  /// Returns the ID of the inserted budget
-  Future<int> insertBudget(Budget budget, ManualPhasing? manualPhasing) async {
+  /// Insert a product into the database
+  /// Returns the ID of the inserted product
+  Future<int> insertProduct(ItemModel product) async {
     try {
       final db = await instance.database;
-      final id = await db.insert('budget', {
-        'description': budget.description,
-        'categoryId': budget.categoryId,
-        'startDate': budget.startDate,
-        'endDate': budget.endDate,
-        'totalAmount': budget.totalAmount,
-        'phasingType': budget.phasingType.toString(),
+      final id = await db.insert('products', {
+        'name': product.name,
+        'calories': product.calories,
+        'ean': product.ean,
+        'fat': product.fat,
+        'carbs': product.carbs,
+        'protein': product.protein,
+        'salt': product.salt,
+        'sugar': product.sugar,
       }, conflictAlgorithm: ConflictAlgorithm.abort);
-
-      if (budget.phasingType == PhasingType.manual && manualPhasing != null) {
-          await db.insert('manual_phasing', {
-            'budgetId': id,
-            'month': manualPhasing.month,
-            'amount': manualPhasing.amount,
-          });
-      }
-
       return id;
-
-    } catch (e) {
-      LoggingService().info('${DateTime.now()}: DB error, manual phasing insert failed with $e');
-      debugLog('DB error, manual phasing insert failed with $e');
+    } catch (e, s) {
+      LoggingService().info('${DateTime.now()}: DB error, adding product failed with $e $s');
+      debugLog('DB error, manual phasing insert failed with $e $s');
       return 0;
     }
   }
