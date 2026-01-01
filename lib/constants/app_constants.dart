@@ -47,6 +47,51 @@ enum Meal {
     Meal.dinner.label,
     Meal.other.label
   ];
+}
+
+/// Represents the measurement unit of an item.
+///
+/// The enum [name] is used for persistence and must remain stable.
+/// The [label] is for display purposes only and may be localised.
+///
+/// IMPORTANT:
+/// Do not persist [Units.label].
+/// Only [Units.name] is stored in the database.
+enum Units {
+  g('g'),
+  kg('kg'),
+  ml('ml'),
+  l('l'),
+  oz('oz'),
+  lb('lb'),
+  cup('cup'),
+  pint('pint'),
+  quart('quart'),
+  gallon('gallon'),
+  tablespoon('tablespoon'),
+  teaspoon('teaspoon'),
+  milliliter('milliliter'),
+  milligram('milligram'),
+  gram('gram'),
+  kilogram('kilogram'),
+  piece('piece'),
+  slice('slice'),
+  other('other');
+
+  /// User-facing display label.
+  final String label;
+
+  const Units(this.label);
+
+  static Units fromLabel(String label) => Units.values.firstWhere((e) => e.label == label);
+  static Units fromName(String name) => Units.values.firstWhere((e) => e.name == name);
+  static final List<String> unitLabels = [
+    Units.g.label,
+    Units.ml.label,
+    Units.piece.label,
+    Units.slice.label,
+    Units.other.label
+  ];
 
 }
 

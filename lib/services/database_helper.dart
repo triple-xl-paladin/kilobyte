@@ -21,16 +21,17 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:kilobyte/constants/app_constants.dart';
 import 'package:kilobyte/models/item_model.dart';
+import 'package:kilobyte/models/meal_item_model.dart';
+import 'package:kilobyte/models/meal_model.dart';
+import '../models/meal_item_view_model.dart';
+import '../models/meal_with_items_model.dart';
 import '../services/logging_service.dart';
 import '../utils/debug_utils.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:io';
-import '../utils/other_utils.dart';
 
-/// Example database implementation for a simple budget and expenditure
-/// tracking app.
-
+/// Implements all the database calls to record the meals and products
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -49,17 +50,23 @@ class DatabaseHelper {
     final path = join(dbPath, filePath);
 
     // Delete the existing database for clean start (development only!)
-    bool resetDatabase = !kReleaseMode;
     final dbFile = File(path);
-    if (await dbFile.exists()) {
+    // kReleaseMode returns true if in release, thus !kReleaseMode returns true if in debug
+    // Note:
+    //  final sets the variable immutable at runtime
+    //  const sets the variable immutable at compile time
+    final bool isDebugMode = !kReleaseMode;
+
+    if (await dbFile.exists() && isDebugMode) {
       LoggingService().info('Deleting existing database at $path');
+      debugLog('Deleting existing database at $path');
       await dbFile.delete();
     }
+    // ends here
 
     LoggingService().info('${DateTime.now()}: Database to be loaded $path');
     return await openDatabase(path, version: 1, onCreate: _createDB);
   }
-
 
   /// Create all the tables
   ///
@@ -88,14 +95,18 @@ class DatabaseHelper {
       CREATE TABLE meal (
         mealId INTEGER PRIMARY KEY AUTOINCREMENT,
         mealName TEXT,
-        mealDTTM DATETIME,
+        mealDTTM DATETIME
       )
     ''');
 
     /// Create meal items table
     await db.execute('''
       CREATE TABLE mealItems (
-        actualId INTEGER PRIMARY KEY AUTOINCREMENT,
+        mealItemId INTEGER PRIMARY KEY AUTOINCREMENT,
+        mealId INTEGER NOT NULL,
+        productId INTEGER NOT NULL,
+        quantity REAL NOT NULL,
+        unit TEXT NOT NULL,
         FOREIGN KEY(mealId) REFERENCES meal(mealId) ON DELETE CASCADE,
         FOREIGN KEY(productId) REFERENCES products(productId) ON DELETE CASCADE
       )
@@ -129,189 +140,150 @@ class DatabaseHelper {
     }
   }
 
-  /*
-  /// Get budgets from the database
-  ///
-  /// Returns a list of budgets
-  Future<List<Budget>> getBudgets() async {
+  Future<int> insertMeal(MealModel meal) async {
     try {
       final db = await instance.database;
-
-      final budgetRows = await db.query('budgets');
-
-      return budgetRows.map((row) => Budget.fromMap(row)).toList();
-    } catch(e) {
-      LoggingService().info('${DateTime.now()}: DB error, get budgets failed with $e');
-      debugLog('DB error, get budgets failed with $e');
-      return [];
-    }
-  }
-
-  /// Update a budget in the database
-  Future<void> updateBudget(Budget budget) async {
-    final db = await instance.database;
-    await db.update('budgets', budget.toMap(), where: 'budgetId = ?', whereArgs: [budget.budgetId]);
-  }
-
-  /// Delete a budget from the database
-  Future<void> deleteBudget(int budgetId) async {
-    final db = await instance.database;
-    await db.delete('budgets', where: 'budgetId = ?', whereArgs: [budgetId]);
-    // Manual phasing will be deleted due to ON DELETE CASCADE
-  }
-
-  /// Insert manual phasing into the database
-  /// This should never be called directly, use [insertBudget] instead
-  Future<void> insertManualPhasing(ManualPhasing manualPhasing) async {
-    final db = await instance.database;
-    await db.insert('manual_phasing', manualPhasing.toMap(), conflictAlgorithm: ConflictAlgorithm.abort);
-  }
-
-  /// Get manual phasing from the database
-  ///
-  /// Returns a list of manual phasing
-  Future<List<ManualPhasing>> getManualPhasing(int budgetId) async {
-    try {
-      final db = await instance.database;
-      final manualPhasingRows = await db.query('manual_phasing', where: 'budgetId = ?', whereArgs: [budgetId]);
-      return manualPhasingRows.map((row) => ManualPhasing.fromMap(row)).toList();
-    } catch(e) {
-      LoggingService().info('${DateTime.now()}: DB error, get manual phasing failed with $e');
-      debugLog('DB error, get manual phasing failed with $e');
-      return [];
-    }
-  }
-
-  /// Update manual phasing in the database
-  Future<void> updateManualPhasing(ManualPhasing manualPhasing) async {
-    final db = await instance.database;
-    await db.update(
-        'manual_phasing', manualPhasing.toMap(), where: 'manualPhasingId = ?',
-        whereArgs: [manualPhasing.manualPhasingId]);
-  }
-
-  /// Delete manual phasing from the database
-  ///
-  /// This is not necessary as the cascade should have this covered
-  Future<void> deleteManualPhasing(int manualPhasingId) async {
-    final db = await instance.database;
-    await db.delete('manual_phasing', where: 'manualPhasingId = ?',
-        whereArgs: [manualPhasingId]);
-  }
-
-  /// Insert actual into the database
-  ///
-  /// Returns the ID of the inserted actual
-  Future<int> insertActual(Actual actual) async {
-    try {
-      final db = await instance.database;
-      final id = await db.insert('actual', {
-        'date': actual.date,
-        'payeeId': actual.payeeId,
-        'categoryId': actual.categoryId,
-        'description': actual.description,
-        'amount': actual.amount,
+      final id = await db.insert('meal', {
+        'mealName': meal.meal.name,
+        'mealDTTM': meal.mealDate.toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.abort);
       return id;
-    } catch (e) {
-      LoggingService().info('${DateTime.now()}: DB error, actual insert failed with $e');
-      debugLog('DB error, actual insert failed with $e');
+    } catch (e, s) {
+      LoggingService().info('${DateTime.now()}: DB error, adding meal failed with $e $s');
+      debugLog('DB error, manual phasing insert failed with $e $s');
       return 0;
     }
   }
 
-  /// Get actuals from the database
-  ///
-  /// Returns a list of actuals
-  Future<List<Actual>> getActual() async {
+  /// Inserts items associated with a meal.
+  /// [mealId] must exist
+  /// [items] must not be empty
+  Future<void> insertMealItems(int mealId, List<MealItemModel> items) async {
+    if(items.isEmpty) return;
+
     try {
       final db = await instance.database;
-      final actualRows = await db.query('actual');
-      return actualRows.map((row) => Actual.fromMap(row)).toList();
-    } catch(e) {
-      LoggingService().info('${DateTime.now()}: DB error, get actuals failed with $e');
-      debugLog('DB error, get actuals failed with $e');
-      return [];
+      await db.transaction((txn) async {
+        for (final item in items) {
+          await txn.insert('mealItems', {
+            'mealId': mealId,
+            'productId': item.productId,
+            'quantity': item.quantity,
+            'unit': item.unit,
+          },
+            conflictAlgorithm: ConflictAlgorithm.abort,
+          );
+        }
+      });
+    } catch (e, s) {
+      LoggingService().info('${DateTime.now()}: DB error, adding items to meal failed with $e $s');
+      debugLog('DB error, insert items to meal failed with $e $s');
     }
   }
 
-  /// Update actual in the database
-  Future<void> updateActual(Actual actual) async {
-    final db = await instance.database;
-    await db.update('actual', actual.toMap(), where: 'actualId = ?', whereArgs: [actual.actualId]);
+  /// Inserts a complete meal entry into the database.
+  /// Returns the ID of the inserted meal.
+  /// This replaces the individual insertions for efficiency.
+  Future<int> insertMealWithItems(MealModel meal) async {
+    final db = await database;
+    int mealId = 0;
+
+    await db.transaction((txn) async {
+      // Insert the meal
+      mealId = await txn.insert('meal', {
+        'mealName': meal.meal.name,
+        'mealDTTM': meal.mealDate.toIso8601String(),
+      });
+
+      // Insert each meal item
+      for (final item in meal.items ?? []) {
+        await txn.insert('mealItems', {
+          'mealId': mealId,
+          'productId': item.productId,
+          'quantity': item.quantity,
+          'unit': item.unit,
+        });
+      }
+    });
+
+    return mealId;
   }
 
-  /// Delete actual from the database
-  Future<void> deleteActual(int actualId) async {
-    final db = await instance.database;
-    await db.delete('actual', where: 'actualId = ?', whereArgs: [actualId]);
-  }
 
-  /// Insert category into the database
-  Future<void> insertCategory(Category category) async {
+  Future<MealWithItems?> getMealWithItems(int mealId) async {
     final db = await instance.database;
-    await db.insert('categories', category.toMap(), conflictAlgorithm: ConflictAlgorithm.abort);
-  }
 
-  /// Get categories from the database
-  ///
-  /// Returns a list of categories
-  Future<List<Category>> getCategories() async {
-    try {
-      final db = await instance.database;
-      final categoryRows = await db.query('categories');
-      return categoryRows.map((row) => Category.fromMap(row)).toList();
-    } catch(e) {
-      LoggingService().info('${DateTime.now()}: DB error, get categories failed with $e');
-      debugLog('DB error, get categories failed with $e');
-      return [];
+    final rows = await db.rawQuery('''
+    SELECT
+      m.mealId            AS meal_mealId,
+      m.mealName          AS meal_mealName,
+      m.mealDTTM          AS meal_mealDTTM,
+
+      mi.mealItemId       AS item_mealItemId,
+      mi.productId        AS item_productId,
+      mi.quantity         AS item_quantity,
+      mi.unit             AS item_unit,
+
+      p.productId         AS product_productId,
+      p.name              AS product_name,
+      p.calories          AS product_calories,
+      p.fat               AS product_fat,
+      p.carbs             AS product_carbs,
+      p.protein           AS product_protein,
+      p.salt              AS product_salt,
+      p.sugar             AS product_sugar
+    FROM meal m
+    JOIN mealItems mi ON mi.mealId = m.mealId
+    JOIN products p   ON p.productId = mi.productId
+    WHERE m.mealId = ?
+    ORDER BY mi.mealItemId
+  ''', [mealId]);
+
+    if (rows.isEmpty) return null;
+
+    // Build the MealModel (meal info)
+    final meal = MealModel(
+      mealId: rows.first['meal_mealId'] as int,
+      meal: Meal.fromName(rows.first['meal_mealName'] as String),
+      mealDate: DateTime.parse(rows.first['meal_mealDTTM'] as String),
+      items: [], // We'll fill view models separately
+    );
+
+    // Build the list of MealItemViewModels
+    final items = <MealItemViewModel>[];
+
+    for (final row in rows) {
+      final mealItem = MealItemModel(
+        mealItemId: row['item_mealItemId'] as int,
+        mealId: meal.mealId!,
+        productId: row['item_productId'] as int,
+        quantity: (row['item_quantity'] as num).toDouble(),
+        unit: row['item_unit'] as String,
+      );
+
+      final product = ItemModel(
+        productId: row['product_productId'] as int,
+        name: row['product_name'] as String,
+        calories: (row['product_calories'] as num?)?.toDouble(),
+        fat: (row['product_fat'] as num?)?.toDouble(),
+        carbs: (row['product_carbs'] as num?)?.toDouble(),
+        protein: (row['product_protein'] as num?)?.toDouble(),
+        salt: (row['product_salt'] as num?)?.toDouble(),
+        sugar: (row['product_sugar'] as num?)?.toDouble(),
+      );
+
+      items.add(MealItemViewModel(
+        mealItem: mealItem,
+        product: product,
+      ));
     }
+
+    return MealWithItems(
+      meal: meal,
+      items: items,
+    );
   }
 
-  /// Update category in the database
-  Future<void> updateCategory(Category category) async {
-    final db = await instance.database;
-    await db.update('categories', category.toMap(), where: 'categoryId = ?', whereArgs: [category.categoryId]);
-  }
-
-  /// Delete category from the database
-  Future<void> deleteCategory(int categoryId) async {
-    final db = await instance.database;
-    await db.delete('categories', where: 'categoryId = ?', whereArgs: [categoryId]);
-    // Budgets will be deleted due to ON DELETE CASCADE
-  }
-
-  /// Insert payee into the database
-  Future<void> insertPayee(Payee payee) async {
-    final db = await instance.database;
-    await db.insert('payee', payee.toMap(), conflictAlgorithm: ConflictAlgorithm.abort);
-  }
-
-  /// Get payees from the database
-  Future<List<Payee>> getPayees() async {
-    try {
-      final db = await instance.database;
-      final payeeRows = await db.query('payee');
-      return payeeRows.map((row) => Payee.fromMap(row)).toList();
-    } catch(e) {
-      LoggingService().info('${DateTime.now()}: DB error, get payees failed with $e');
-      debugLog('DB error, get payees failed with $e');
-      return [];
-    }
-  }
-
-  /// Update payee in the database
-  Future<void> updatePayee(Payee payee) async {
-    final db = await instance.database;
-    await db.update('payee', payee.toMap(), where: 'payeeId = ?', whereArgs: [payee.payeeId]);
-  }
-
-  /// Delete payee from the database
-  Future<void> deletePayee(int payeeId) async {
-    final db = await instance.database;
-    await db.delete('payee', where: 'payeeId = ?', whereArgs: [payeeId]);
-  }
-*/
   /// Delete the database
   Future<void> resetDatabase() async {
     final dbPath = await getDatabasesPath();
