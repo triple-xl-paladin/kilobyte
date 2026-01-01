@@ -18,15 +18,18 @@
  */
 
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
+import '../services/logging_service.dart';
 
 Future<void> showLogViewerDialog(BuildContext context) async {
+  final loggingService = LoggingService(); // or inject if you're using DI
+
   showDialog(
     context: context,
     builder: (BuildContext dialogContext) {
       return FutureBuilder<String>(
-        future: _loadLogFile(),
+        future: loggingService.loadLogContents(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return AlertDialog(
@@ -60,6 +63,10 @@ Future<void> showLogViewerDialog(BuildContext context) async {
               ),
               actions: [
                 TextButton(
+                  onPressed: () => exportLogsToFile(dialogContext, logContent),
+                  child: const Text('Export'),
+                ),
+                TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
                   child: Text('Close'),
                 ),
@@ -72,19 +79,29 @@ Future<void> showLogViewerDialog(BuildContext context) async {
   );
 }
 
-Future<String> _loadLogFile() async {
+Future<void> exportLogsToFile(
+    BuildContext context,
+    String logContent,
+    ) async {
   try {
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/daggerheart.log');
-    if (!await file.exists()) {
-      String msg = 'Log file not found.';
-      debugPrint('${DateTime.now()}: $msg');
-      return msg;
-    }
-    return await file.readAsString();
+    final String? outputPath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Export logs',
+      fileName: 'app_logs.txt',
+      type: FileType.custom,
+      allowedExtensions: ['txt', 'log'],
+    );
+
+    if (outputPath == null) return; // user cancelled
+
+    final file = File(outputPath);
+    await file.writeAsString(logContent);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Logs exported successfully')),
+    );
   } catch (e) {
-    String msg = 'Failed to load log: $e';
-    debugPrint('${DateTime.now()}: $msg');
-    return msg;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to export logs: $e')),
+    );
   }
 }

@@ -17,7 +17,7 @@
  * along with kilobyte.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import '../screens/show_LogViewer_Dialog.dart';
+import '../screens/show_log_viewer_dialog.dart';
 import '../services/theme_loader_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';

@@ -18,6 +18,7 @@
  */
 
 import 'dart:io';
+import '../constants/app_constants.dart';
 import '../utils/debug_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
@@ -42,7 +43,7 @@ class LoggingService {
 
     Logger.root.onRecord.listen((record) {
       final logMessage =
-        '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}';
+          '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}';
 
       // Print to console
       debugLog('LoggingService: $logMessage');
@@ -53,10 +54,27 @@ class LoggingService {
 
     rootLogger = Logger('Root');
 
-    rootLogger.info('${DateTime.now()} LoggingService initialised and log file: ${logFile.path}');
+    //rootLogger.info('${DateTime.now()} LoggingService initialised and log file: ${logFile.path}');
+    rootLogger.info('LoggingService initialised and log file: ${logFile.path}');
   }
 
   Logger getLogger(String name) => Logger(name);
+
+  Future<String> loadLogContents() async {
+    try {
+      final logFile = await _initLogFile(); // Reuses logic already in service
+      if (!await logFile.exists()) {
+        final msg = 'Log file not found.';
+        debugPrint('${DateTime.now()}: $msg');
+        return msg;
+      }
+      return await logFile.readAsString();
+    } catch (e) {
+      final msg = 'Failed to load log: $e';
+      debugPrint('${DateTime.now()}: $msg');
+      return msg;
+    }
+  }
 
   // Convenience methods for logging at root level
   void info(String message) => rootLogger.info(message);
@@ -81,7 +99,7 @@ class LoggingService {
     }
 
     //final directory = await getApplicationDocumentsDirectory(); // Or use a specific directory if desired
-    final logFile = File('${directory.path}/my-money.log');
+    final logFile = File('${directory.path}/${AppConstants.logFileName}');
 
     if (!await logFile.exists()) {
       await logFile.create(recursive: true);
