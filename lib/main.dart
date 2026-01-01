@@ -19,7 +19,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
+import 'package:kilobyte/providers/favourites_provider.dart';
 import 'package:kilobyte/screens/home_screen.dart';
+import 'package:kilobyte/services/database_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:logging/logging.dart';
@@ -101,14 +103,21 @@ void main(List<String> args) async {
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: themeProvider),
+          ChangeNotifierProvider(
+            create: (_) {
+              final favouritesProvider = FavouritesProvider(DatabaseHelper.instance);
+              favouritesProvider.load(); // load favourites once
+              return favouritesProvider;
+            },
+          ),
         ],
-        child: const MyApp(),
+        child: const Kilobyte(),
       )
   );
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Kilobyte extends StatelessWidget {
+  const Kilobyte({super.key});
 
   // This widget is the root of your application.
   @override

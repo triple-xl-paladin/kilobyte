@@ -112,7 +112,34 @@ class DatabaseHelper {
       )
     ''');
 
+    /// Create favourite products table
+    await db.execute('''
+    CREATE TABLE favouriteProducts (
+        productId INTEGER PRIMARY KEY,
+        addedDTTM DATETIME,
+        FOREIGN KEY(productId) REFERENCES products(productId) ON DELETE CASCADE
+    );
+    ''');
+
+
     LoggingService().info('${DateTime.now()}: Database tables created');
+  }
+
+  /// Delete the database
+  Future<void> resetDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, _dbName);
+
+    // Delete the existing database for clean start
+    final dbFile = File(path);
+
+    if (await dbFile.exists()) {
+      LoggingService().info('${DateTime.now()}: Deleting existing database at $path');
+      await dbFile.delete();
+    }
+
+    // Also clear the cached _database instance so it reopens fresh next time
+    _database = null;
   }
 
   // CRUD operations here...
@@ -284,21 +311,130 @@ class DatabaseHelper {
     );
   }
 
-  /// Delete the database
-  Future<void> resetDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, _dbName);
+  Future<List<ItemModel>> getRecentlyUsedProducts({int limit = 20}) async {
+    final db = await database;
 
-    // Delete the existing database for clean start
-    final dbFile = File(path);
+    final result = await db.rawQuery('''
+    SELECT
+      p.*,
+      MAX(m.mealDTTM) AS lastUsed
+    FROM mealItems mi
+    JOIN meal m ON m.mealId = mi.mealId
+    JOIN products p ON p.productId = mi.productId
+    GROUP BY p.productId
+    ORDER BY lastUsed DESC
+    LIMIT ?
+  ''', [limit]);
 
-    if (await dbFile.exists()) {
-      LoggingService().info('${DateTime.now()}: Deleting existing database at $path');
-      await dbFile.delete();
-    }
-
-    // Also clear the cached _database instance so it reopens fresh next time
-    _database = null;
+    return result.map(ItemModel.fromMap).toList();
   }
+
+  Future<void> insertFavourite(ItemModel product) async {
+    try {
+      final db = await instance.database;
+      await db.insert('favouriteProducts', {
+        'productId': product.productId,
+        'addedDTTM': DateTime.now().toIso8601String(),
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    } catch (e, s) {
+      LoggingService().info('${DateTime.now()}: DB error, adding favourite failed with $e $s');
+      debugLog('DB error, adding favourite failed with $e $s');
+    }
+  }
+
+  Future<void> deleteFavourites(ItemModel product) async {
+    try {
+      final db = await instance.database;
+      await db.delete(
+        'favouriteProducts',
+        where: 'productId = ?',
+        whereArgs: [product.productId],
+      );
+    } catch (e, s) {
+      LoggingService().info('${DateTime.now()}: DB error, deleting favourite product failed with $e $s');
+      debugLog('DB error, deleting favourite product failed with $e $s');
+    }
+  }
+
+  Future<void> toggleFavourite(int productId) async {
+    final db = await instance.database;
+
+    final exists = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT 1 FROM favouriteProducts WHERE productId = ? LIMIT 1',
+        [productId],
+      ),
+    );
+
+    if (exists == null) {
+      await insertFavouriteById(productId);
+    } else {
+      await deleteFavouriteById(productId);
+    }
+  }
+
+  Future<void> insertFavouriteById(int productId) async {
+    try {
+      final db = await instance.database;
+
+      await db.insert(
+        'favouriteProducts',
+        {
+          'productId': productId,
+          'addedDTTM': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    } catch (e, s) {
+      LoggingService().info(
+        '${DateTime.now()}: DB error, adding favourite failed with $e $s',
+      );
+      debugLog('DB error, adding favourite failed with $e $s');
+    }
+  }
+
+  Future<void> deleteFavouriteById(int productId) async {
+    try {
+      final db = await instance.database;
+
+      await db.delete(
+        'favouriteProducts',
+        where: 'productId = ?',
+        whereArgs: [productId],
+      );
+    } catch (e, s) {
+      LoggingService().info(
+        '${DateTime.now()}: DB error, deleting favourite failed with $e $s',
+      );
+      debugLog('DB error, deleting favourite failed with $e $s');
+    }
+  }
+
+  Future<List<int>> getFavouriteProductIds() async {
+    final db = await instance.database;
+
+    final result = await db.query(
+      'favouriteProducts',
+      columns: ['productId'],
+    );
+
+    return result
+        .map((row) => row['productId'] as int)
+        .toList();
+  }
+
+  Future<bool> isFavourite(int productId) async {
+    final db = await instance.database;
+
+    final result = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT 1 FROM favouriteProducts WHERE productId = ? LIMIT 1',
+        [productId],
+      ),
+    );
+
+    return result != null;
+  }
+
 
 }
